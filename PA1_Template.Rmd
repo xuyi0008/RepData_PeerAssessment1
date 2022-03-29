@@ -1,0 +1,75 @@
+---
+title: "PA1_Template"
+output: html_document
+---
+
+setwd("~/Coursera/Chap 5 - Week 2")
+
+data <- read.csv("activity.csv")  
+
+#Total Number of Steps per Day
+totalstepsperday <- aggregate(steps ~ date, data, sum)
+hist(totalstepsperday$steps, main = paste("Total Steps Per Day"), col="darkcyan",xlab="Number of Steps")
+
+#Mean of Total Steps 
+totalstepsmean <- mean(totalstepsperday$steps)
+totalstepsmean
+#Means of total steps = 10766.19
+
+#Median of Total Steps
+totalstepsmedian <- median(totalstepsperday$steps)
+totalstepsmedian
+#Median of total steps = 10765
+
+#Avg steps for 5min interval for all days
+avgstepsper5min <- aggregate(steps ~ interval, data, mean)
+plot(avgstepsper5min$interval,avgstepsper5min$steps, type="l", xlab="Interval", ylab="Number of Steps",main="Average Number of Steps per Day by Interval")
+
+#Interval with highest no. of avg steps
+highestinterval <- avgstepsper5min[which.max(avgstepsper5min$steps),1]
+highestinterval
+#Highest number of average steps recorded per interval is 835
+
+#Calculate total number of missing values
+missingtotal <- sum(!complete.cases(data))
+missingtotal
+#Total number of missing value is 2304
+
+#Fill up missing value with median
+avgsteps <- aggregate(steps ~ interval, data = data, FUN = median)
+fillmissing <- numeric()
+for (i in 1:nrow(data)) {
+    obs <- data[i, ]
+    if (is.na(obs$steps)) {
+        steps <- subset(avgsteps, interval == obs$interval)$steps
+    } else {
+        steps <- obs$steps
+    }
+    fillmissing <- c(fillmissing, steps)
+}
+
+#create new dataset
+newdata <- data
+newdata$steps <- fillmissing
+
+#Total Number of Steps per day and Mean and Median with newdata
+newtotalstepsperday <- aggregate(steps ~ date, data = newdata, sum, na.rm = TRUE)
+hist(newtotalstepsperday$steps, main = paste("Total Steps Each Day"), col="cyan", xlab="Number of Steps")
+
+#Impact of filling up missing values
+hist(totalstepsperday$steps, main = paste("Total Steps Each Day"), col="darkcyan", xlab="Number of Steps", add=T)
+legend("topright", c("Imputed", "Non-imputed"), col=c("cyan", "darkcyan"), lwd=10)
+
+newmean <- mean(newtotalstepsperday$steps)
+newmedian <- median(newtotalstepsperday$steps)
+
+meandiff <-  newmean - totalstepsmean
+mediandiff <- newmedian - totalstepsmedian
+
+#Differentiate weekday vs weekend
+weekdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", 
+              "Friday")
+newdata$dow = as.factor(ifelse(is.element(weekdays(as.Date(newdata$date)),weekdays), "Weekday", "Weekend"))
+newtotalstepsperday <- aggregate(steps ~ interval + dow, newdata, mean)
+library(lattice)
+xyplot(newtotalstepsperday$steps ~ newtotalstepsperday$interval|newtotalstepsperday$dow, main="Average Steps per Day by Interval",xlab="Interval", ylab="Steps",layout=c(1,2), type="l")
